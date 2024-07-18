@@ -13,7 +13,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from Scheduler_final import scheudler_run
+from Scheduler_final import lp_solver
 from API_interface_final import grab_sheet
 
 
@@ -57,11 +57,13 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
         print(f"An error occurred: {error}")
 
 def main():
-    scheudler_run()
+    lp_solver()
     service = get_service()
     data = load_data_from_json('schedule_data.json')
     update_sheet(service, SPREADSHEET_ID, SHEET_NAME, data)
 
 if __name__ == "__main__":
     main()
+
+
 

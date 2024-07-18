@@ -11,8 +11,9 @@ import json
 import pulp as lp
 from API_interface_final import grab_sheet
 import datetime
+import os
 
-def scheudler_run():
+def lp_solver():
     def print_with_timestamp(message):
         # Get the current date and time
         current_time = datetime.datetime.now()
@@ -262,12 +263,27 @@ def scheudler_run():
         ]
         data.extend(summary)
         return data
-    
+        
     def save_data_to_json(data, filename):
-        with open(filename, 'w') as f:
-            json.dump(data, f)
+        """
+        Save data to a JSON file. If the file exists, it will be overwritten.
+        If the file does not exist, a new one will be created.
     
-    def main():
+        Args:
+            data (dict): The data to be saved.
+            filename (str): The name of the file where data will be saved.
+        """
+        # Get the absolute path of the file
+        abs_path = os.path.abspath(filename)
+        
+        try:
+            with open(abs_path, 'w') as f:
+                json.dump(data, f, indent=4)
+            print(f"Data successfully saved to {abs_path}")
+        except Exception as e:
+            print(f"An error occurred while saving data to {abs_path}: {e}")
+                
+    def scheduler_run():
         # Assuming you have the required arguments already defined here
         data = prepare_schedule_data(
             employee_names, days_considering, num_employees, num_days, 
@@ -275,9 +291,8 @@ def scheudler_run():
         )
         save_data_to_json(data, 'schedule_data.json')
     
-    return lp.LpStatus[prob.status]
+        return lp.LpStatus[prob.status]
 
 
-# if __name__ == "__main__":
-#     main()
+    scheduler_run()
 
