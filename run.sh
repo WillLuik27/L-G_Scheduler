@@ -7,9 +7,9 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Install the required dependencies
-pip install -r requirements.txt
+pip install -r lib_requirements.txt
 
-# Run the main Python script (assuming it's named main.py)
+# Run the main Python script
 python main.py
 
 # Deactivate the virtual environment
