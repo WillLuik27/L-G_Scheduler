@@ -7,10 +7,10 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Install the required dependencies
-pip install -r lib_requirements.txt
+pip install -r requirements.txt
 
-# Run the main Python script
-python API_Paster_final
+# Run the main Python script (assuming it's named main.py)
+python main.py
 
 # Deactivate the virtual environment
 deactivate
