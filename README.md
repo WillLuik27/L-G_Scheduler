@@ -3,15 +3,14 @@ Hopefully, we can use this!!!
 
 I will try to make this as easy as possible for you. However, for simplicity in explanation, it is best to do this on a MacOS or Linux computer -- these commands will not always work on Windows. 
 Note: do not include the quotations in the terminal commands.
-1. Download any 3.x python versions at https://www.python.org/downloads/
-2. Download this repository
-3. Open terminal
-4. Navigate to the directory of where the GitHub repository is. Preferably, save it to desktop and follow these commands.
+1. Download this repository
+2. Open terminal
+3. Navigate to the directory of where the GitHub repository is. Preferably, save it to desktop and follow these commands.
    - cd desktop
    - cd "___Whatever the name of the downloaded folder is__" (obviously not this but what the name is)
-5. in terminal enter this to make files executable: "chmod +x run.sh"
-6. in terminal enter this to run everything: "./run.sh"
-7.   
+4. in terminal enter this to make files executable: "chmod +x run.sh"
+5. in terminal enter this to run everything: "./run.sh"
+   
 
 
 
