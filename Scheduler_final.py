@@ -55,7 +55,7 @@ def lp_solver():
     print("days_considering", days_considering)
     print("total_labor_hour_limit", total_labor_hour_limit)
     print("min_morning_FP_hrs______________", min_morning_FP_hrs)
-    print("FP_cutoff_hour",FP_cutoff_hour)
+    print("FP_cutoff_hour",FP_cutoff_hour, " AM")
     
     # Define data for hours. based on 24 hour time
     
@@ -218,11 +218,7 @@ def lp_solver():
     # Output results
     print("Status:", lp.LpStatus[prob.status])
     
-            
-    
-    # Print the schedule from 7 am to 12 pm for both days
-    total_team_hours =0
-    day_off_count =0
+
     
     
     def prepare_schedule_data(employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref):

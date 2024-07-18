@@ -14,6 +14,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 
+import sys
+print(sys.prefix)
+
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SPREADSHEET_ID = "110KkeoBMKEB48OogS5E5X3LZN4liKbKEQJzpx8sYv8E"
@@ -84,18 +87,19 @@ def grab_sheet():
                 ).execute()
                 range_values = range_result.get("values", [])[0] if range_result.get("values", []) else []
         
-                # Convert values to the specified data type
-                if data_type == int :
-                    range_values = [int(value) for value in range_values]
+                # Filter out empty values and convert the remaining values to the specified data type
+                if data_type == int:
+                    range_values = [int(value) for value in range_values if value]
                 elif data_type == float:
-                    range_values = [float(value) for value in range_values]
+                    range_values = [float(value) for value in range_values if value]
                 else:
-                    range_values = [str(value) for value in range_values]
+                    range_values = [str(value) for value in range_values if value]
         
                 return range_values
             except HttpError as error:
                 print(f"An error occurred: {error}")
                 return []
+
 
         
         days_considering = get_range_values("AIR12:AIX12")
