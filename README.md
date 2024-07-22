@@ -10,6 +10,9 @@ Note: do not include the quotations in the terminal commands.
    - cd "___Whatever the name of the downloaded folder is__" (obviously not this but what the name is)
 4. in terminal enter this to make files executable: "chmod +x run.sh"
 5. in terminal enter this to run everything: "./run.sh"
+_
+_
+If this is the first time, you will need to download Python3 and all the require packages. Once downloaded, restart the steps on this README
    
 
 
