@@ -240,6 +240,10 @@ def grab_sheet():
             end_hour = float (get_cell_value("AIR8"))
             min_weekly_FP_hrs = float(get_cell_value("AIR11"))
             sheets_time_limit = int(get_cell_value("AIR16"))
+            earliest_shift_end = float (get_cell_value("AIR17"))
+            latest_shift_start = float(get_cell_value("AIR18") )
+            
+            
             
             FP_cutoff_hour= float (get_cell_value("AIR9"))
 
@@ -327,7 +331,9 @@ def grab_sheet():
             "employee_names": employee_names,
             "min_daily_FP_hrs": min_daily_FP_hrs, 
             "min_weekly_FP_hrs": min_weekly_FP_hrs, 
-            "sheets_time_limit": sheets_time_limit
+            "sheets_time_limit": sheets_time_limit,
+            "latest_shift_start": latest_shift_start,
+            "earliest_shift_end": earliest_shift_end
         }
 
      

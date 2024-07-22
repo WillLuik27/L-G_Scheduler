@@ -147,11 +147,6 @@ def lp_solver():
         prob += lp.lpSum(x[i][d][j][a] for d in range(num_days) for j in range(num_segments) for a in range(num_job)) <=  allocated_max_hours [employee_names[i]] *(int (60/segment_minutes))
         prob += lp.lpSum(x[i][d][j][a] for d in range(num_days) for j in range(num_segments) for a in range(num_job)) >=  allocated_min_hours [employee_names[i]] *(int(60/segment_minutes))
         for d in range(num_days):
-            for a in range(num_job):
-                # Constraint: if employee starts working at start time (7 am), then f[i][d][0] = 1 for any job type 'a'
-                prob += f[i][d][0] == x[i][d][0][a]  # Ensure f[i][d][0] is set to 1 if x[i][d][0][a] is 1 for job type 'a'
-            
-                
             #Constraint: Min & Max hours per emploee per day or none hours at all
             prob += lp.lpSum(x[i][d][j][a] for j in range(num_segments) for a in range(num_job)) >= min_shift_len * y[i][d]  # Minimum hours if y[i][d] == 1
             prob += lp.lpSum(x[i][d][j][a] for j in range(num_segments) for a in range(num_job)) <= max_shift_len * y[i][d]  # Maximum hours if y[i][d] == 1
@@ -175,18 +170,19 @@ def lp_solver():
                  
     
     
-    # Constraints: enforce f[i][d][j+1] == 1 when total x[i][d][j] == 0 and total x[i][d][j+1] == 1 across all job types
-    for i in range(num_employees):
-        for d in range(num_days):
-            for j in range(num_segments - 1):
-                # Sum over all job types to check if there's a transition from 0 to 1 in total working hours
-                prob += f[i][d][j+1] >= lp.lpSum(x[i][d][j+1][a] for a in range(num_job)) - lp.lpSum(x[i][d][j][a] for a in range(num_job))
+
     
     
     #Cosntraint to make an end time for each employee. building the e[i][d][j] variable
     for i in range(num_employees):
         for d in range(num_days):
+            # Ensure that ending shifts are properly accounted for in the last segment
+            prob += e[i][d][num_segments - 1] == lp.lpSum(x[i][d][num_segments - 1][a] for a in range(num_job))
+            # ensure starting shift properly accounted for for edge effects
+            prob += f[i][d][0] == lp.lpSum(x[i][d][0][a] for a in range(num_job))
             for j in range(num_segments - 1):
+                # Sum over all job types to check if there's a transition from 0 to 1 in total working hours
+                prob += f[i][d][j+1] >= lp.lpSum(x[i][d][j+1][a] for a in range(num_job)) - lp.lpSum(x[i][d][j][a] for a in range(num_job))
                 for a in range(num_job):
                     # Set e[i][d][j] = 1 if transitioning from 1 to 0
                     prob += e[i][d][j] >= lp.lpSum(x[i][d][j][a] for a in range(num_job)) - lp.lpSum(x[i][d][j+1][a] for a in range(num_job))
@@ -194,22 +190,14 @@ def lp_solver():
                 # Ensure e[i][d][j] is correctly set only for the transition from 1 to 0
                 prob += e[i][d][j] <= lp.lpSum(x[i][d][j][a] for a in range(num_job))
                 prob += e[i][d][j] <= 1 - lp.lpSum(x[i][d][j+1][a] for a in range(num_job))
-    for i in range(num_employees):
-        for d in range(num_days):
-            # Ensure that ending shifts are properly accounted for in the last segment
-            prob += e[i][d][num_segments - 1] == lp.lpSum(x[i][d][num_segments - 1][a] for a in range(num_job))
-    for i in range(num_employees):
-        for d in range(num_days):
-            for j in range(earliest_shift_end):
-                prob +=e[i][d][j]== 0
                 
-    #Constraint: force ealiest end time and latest start time
+    #Constraint: force earliest end time and latest start time
     for i in range(num_employees):
         for d in range(num_days):
             for j in range(latest_shift_start, num_segments): # for the times after latest shift start to the end of the day, nobody will start a shift
                 prob += f[i][d][j] ==0
-            for j in range (earliest_shift_end): # for the times between the start of the day and earliest shit end time, nobody will end their shift
-                prob += e[i][d][j] ==0
+            for k in range (earliest_shift_end): # for the times between the start of the day and earliest shit end time, nobody will end their shift
+                prob += e[i][d][k] ==0
     
     
     
@@ -222,7 +210,6 @@ def lp_solver():
                          
         for j in range(num_segments):
             # Constraint: Ensure more than the specified number of people are working BM each hour
-
             prob += lp.lpSum(x[i][d][j][1] for i in range(num_employees)) >=  hourly_requirements_BM[days_considering [d]][j]
     
     
