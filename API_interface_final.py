@@ -132,20 +132,28 @@ def grab_sheet():
                     elif row[col_shift_type] == "BM":
                         force_shift[employee][day]["job_type"] = 1
                         
-        def populate_hourly_requirements_BM(values, end_req_col, days_considering):
-            hourly_requirements_BM = {day: [] for day in days_considering}
+        def populate_hourly_requirements_BM(values, end_req_col):
+            day_column_map = {
+                "Sunday": "AJG",
+                "Monday": "AJA",
+                "Tuesday": "AJB",
+                "Wednesday": "AJC",
+                "Thursday": "AJD",
+                "Friday": "AJE",
+                "Saturday": "AJF"
+            }
+            
+            days_considering_list = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+            hourly_requirements_BM = {day: [] for day in days_considering_list}
             
             if values:
-                day_columns = [ "AJG", "AJA", "AJB", "AJC", "AJD", "AJE", "AJF" ]
-                num_days = len(days_considering)
-                
                 for row in values[2:end_req_col]:  # Ensure this includes the ending
-                    for idx, day_column in enumerate(day_columns[:num_days]):
-                        day_name = days_considering[idx]
+                    for day in days_considering_list:
+                        day_column = day_column_map[day]
                         if len(row) > column_to_index(day_column):
                             day_info = row[column_to_index(day_column)]
                             if day_info is not None:
-                                hourly_requirements_BM[day_name].append(int(day_info))
+                                hourly_requirements_BM[day].append(int(day_info))
             
             return hourly_requirements_BM
 
@@ -233,7 +241,7 @@ def grab_sheet():
             min_weekly_FP_hrs = float(get_cell_value("AIR11"))
             sheets_time_limit = int(get_cell_value("AIR16"))
             
-            FP_cutoff_hour= int (get_cell_value("AIR9"))
+            FP_cutoff_hour= float (get_cell_value("AIR9"))
 
             total_labor_hour_limit = float (get_cell_value("AIR10"))
             
@@ -273,7 +281,7 @@ def grab_sheet():
             # print("force shifts", force_shift)
             # print("_____________________________________________")
             # print("Avilability", availability)
-            # print (len(availability["Jose Juarez"]["Sunday"]))
+            # print (len(availability["Leah Lem"]["Tuesday"]))
  
             # print("_____________________________________________")
             # print (availability["Jose Juarez"]["Sunday"])
@@ -292,9 +300,7 @@ def grab_sheet():
         end_req_col = int(get_cell_value("AJD1")) + 2  
         
         # Assuming values is defined and fetched from somewhere
-        hourly_requirements_BM = populate_hourly_requirements_BM(values, end_req_col, days_considering)
-        # print("hourly_requirements_BM", hourly_requirements_BM) 
-        # print(len(hourly_requirements_BM["Sunday"]))
+        hourly_requirements_BM = populate_hourly_requirements_BM(values, end_req_col)
 
        
             

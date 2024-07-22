@@ -63,19 +63,28 @@ def lp_solver():
     print("Run optimization software")
     print("__________________________________________________")
     print_with_timestamp("start time of run")
+    print( "Software will run for", sheets_time_limit/60, " minutes" )
+    print(sheets_time_limit )
     
-    num_hours = end_hour - start_hour   # Number of hours in the specified range
+
+    
+    end_hour_backend =22
+    start_hour_backend = 6
+    
+    num_hours = end_hour_backend - start_hour_backend   # Number of hours in the specified range
     segment_minutes =15
     num_segments = int(((num_hours) * (60 / segment_minutes)))  # Number of 15-minute segments. 
     
-    
+
+
+
     # Create min_morning_FP by multiplying each element in min_morning_FP_hrs by (60 / segment_minutes)
     min_morning_FP = [hours * (60 / segment_minutes) for hours in min_morning_FP_hrs]
     
+
     
-    
-    num_days = len(days_considering)  # Number of days (Monday and Tuesday)
-    
+    num_days = len(days_considering)  
+
     num_job = len(job_type)
     
     # min max shift hours
@@ -92,10 +101,7 @@ def lp_solver():
     
     
     # Calculate the indices for hours before the cutoff hour
-    hours_before_cutoff = [j for j in range(int((FP_cutoff_hour - start_hour ) * (60/segment_minutes)))] # plus 1 so that we include the cutooff hour. Range is not inclusive
-    
-    
-    
+    hours_before_cutoff = [j for j in range(int(( FP_cutoff_hour - start_hour_backend ) * (60/segment_minutes)))] # plus 1 so that we include the cutooff hour. Range is not inclusive
     
     
     # Initialize the LP problem
@@ -117,13 +123,13 @@ def lp_solver():
     # #Objective function: minimize the total number of people working
     # prob+= lp.lpSum(f[i][d][j]  for i in range(num_employees) for d in range(num_days) for j in range(num_segments))
     
-    # Objective function: minimize the hours worked
-    prob += lp.lpSum(x[i][d][j][a] for i in range(num_employees) for d in range(num_days) for j in range(num_segments) for a in range(num_job))
+    # # Objective function: minimize the hours worked
+    # prob += lp.lpSum(x[i][d][j][a] for i in range(num_employees) for d in range(num_days) for j in range(num_segments) for a in range(num_job))
     
     #______when changing objective functions need to consider changing LPMaximize to LPMinimize
-    # # Objective function: maximize the preference minus hour worked. It is on 2 lines bc so long. we can make this weighted as well is we care more about one over the other
-    # prob += lp.lpSum(preferece[employee_names[i]] * lp.lpSum(x[i][d][j][a] for d in range(num_days) for j in range(num_segments)) for i in range(num_employees) for a in range(num_job))/4 \
-    #  - (lp.lpSum(x[i][d][j][a] for i in range(num_employees) for d in range(num_days) for j in range(num_segments) for a in range(num_job)))/4
+    # Objective function: maximize the preference minus hour worked. It is on 2 lines bc so long. we can make this weighted as well is we care more about one over the other
+    prob += - (lp.lpSum(employee_pref [employee_names[i]] * lp.lpSum(x[i][d][j][a] for d in range(num_days) for j in range(num_segments)) for i in range(num_employees) for a in range(num_job))/5) \
+      + (lp.lpSum(x[i][d][j][a] for i in range(num_employees) for d in range(num_days) for j in range(num_segments) for a in range(num_job)))
     
     
     
@@ -144,7 +150,7 @@ def lp_solver():
             
             # Constraints: ensure f[i][d][j] sums to 1 for each employee per day. Can only start once
             prob += lp.lpSum(f[i][d][j] for j in range(num_segments)) == y[i][d]
-            for j in range(num_segments):
+            for j in range(num_segments) : 
                 prob += lp.lpSum(x[i][d][j][a] for a in range(num_job)) <=1  #Constraint: can only work one shift type at a time
                 
                 #Constraint: Consider skill abilities If employee does not have FP ability, they cannot be assigned to FP tasks (job_type[0])
@@ -179,7 +185,8 @@ def lp_solver():
         prob += lp.lpSum(x[i][d][j][0] for i in range(num_employees) for j in hours_before_cutoff) >= min_morning_FP[d]
                          
         for j in range(num_segments):
-            # Constraint: Ensure no more than the specified number of people are working BM each hour
+            # Constraint: Ensure more than the specified number of people are working BM each hour
+
             prob += lp.lpSum(x[i][d][j][1] for i in range(num_employees)) >=  hourly_requirements_BM[days_considering [d]][j]
     
     
@@ -221,11 +228,11 @@ def lp_solver():
 
     
     
-    def prepare_schedule_data(employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref):
+    def prepare_schedule_data(employee_names, days_considering, num_employees, num_days, num_segments, num_job , segment_minutes, y, x, f, employee_pref):
         data = []
         headers = ["Employee", "Day", "Start Time", "Job Type", "Total Hours"]
         data.append(headers)
-    
+        start_hour_index =6
         total_team_hours = 0
         day_off_count = 0
     
@@ -242,7 +249,7 @@ def lp_solver():
                                 total_team_hours += 1
                             
                                 job_type = "FP" if a == 0 else "BM" if a == 1 else "Unknown"
-                                hour = int(start_hour + (j * segment_minutes) // 60)
+                                hour = int(start_hour_index + (j * segment_minutes) // 60)
                                 minute = int((j * segment_minutes) % 60)
                                 time_str = f"{hour:02d}:{minute:02d}"
                                 data.append([employee_names[i], days_considering[d], time_str, job_type, total_day_hours / (60/segment_minutes)])
@@ -283,7 +290,7 @@ def lp_solver():
         # Assuming you have the required arguments already defined here
         data = prepare_schedule_data(
             employee_names, days_considering, num_employees, num_days, 
-            num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref
+            num_segments, num_job, segment_minutes, y, x, f, employee_pref
         )
         save_data_to_json(data, 'schedule_data.json')
     
