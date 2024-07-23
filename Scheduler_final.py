@@ -121,9 +121,6 @@ def lp_solver():
     # f[i][d][j] is 1 for the one hour when they start to work on day d. This is the start flag so only consecutive shifts
     f = [[[lp.LpVariable(f"f_{i}_{d}_{j}", cat=lp.LpBinary) for j in range(num_segments)] for d in range(num_days)] for i in range(num_employees)]
     
-    #e[i][d][j] is 1 for when employees end their shift; will be zero otherwise
-    e = [[[lp.LpVariable(f"e_{i}_{d}_{j}", cat=lp.LpBinary) for j in range(num_segments)] for d in range(num_days)] for i in range(num_employees)]
-    
     # # Objective function: minimize the total number of hours team works
     # prob += lp.lpSum(x[i][d][j] for i in range(num_employees) for d in range(num_days) for j in range(num_segments))
     
@@ -177,28 +174,17 @@ def lp_solver():
     for i in range(num_employees):
         for d in range(num_days):
             # Ensure that ending shifts are properly accounted for in the last segment
-            prob += e[i][d][num_segments - 1] == lp.lpSum(x[i][d][num_segments - 1][a] for a in range(num_job))
+          
             # ensure starting shift properly accounted for for edge effects
             prob += f[i][d][0] == lp.lpSum(x[i][d][0][a] for a in range(num_job))
             for j in range(num_segments - 1):
                 # Sum over all job types to check if there's a transition from 0 to 1 in total working hours
                 prob += f[i][d][j+1] >= lp.lpSum(x[i][d][j+1][a] for a in range(num_job)) - lp.lpSum(x[i][d][j][a] for a in range(num_job))
-                for a in range(num_job):
-                    # Set e[i][d][j] = 1 if transitioning from 1 to 0
-                    prob += e[i][d][j] >= lp.lpSum(x[i][d][j][a] for a in range(num_job)) - lp.lpSum(x[i][d][j+1][a] for a in range(num_job))
-                    
-                # Ensure e[i][d][j] is correctly set only for the transition from 1 to 0
-                prob += e[i][d][j] <= lp.lpSum(x[i][d][j][a] for a in range(num_job))
-                prob += e[i][d][j] <= 1 - lp.lpSum(x[i][d][j+1][a] for a in range(num_job))
-                
-    #Constraint: force earliest end time and latest start time
-    for i in range(num_employees):
+
+
+    for i in range (num_employees):
         for d in range(num_days):
-            for j in range(latest_shift_start, num_segments): # for the times after latest shift start to the end of the day, nobody will start a shift
-                prob += f[i][d][j] ==0
-            for k in range (earliest_shift_end): # for the times between the start of the day and earliest shit end time, nobody will end their shift
-                prob += e[i][d][k] ==0
-    
+            prob += lp.lpSum(x[i][d][j][a] for j in range(latest_shift_start, earliest_shift_end) for a in range(num_job)) >= y[i][d] * (earliest_shift_end - latest_shift_start)
     
     
     for d in range(num_days):
@@ -247,26 +233,27 @@ def lp_solver():
     
     # Output results
     print("Status:", lp.LpStatus[prob.status])
+    return status, employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref
     
+
+def get_lp_solver_outputs():
+    return lp_solver()
 
     
     
-def prepare_schedule_data(employee_names, days_considering, num_employees, num_days, num_segments, num_job, segment_minutes, y, x, f, e, employee_pref):
+def prepare_schedule_data(employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref):
     data = []
-    headers = ["Employee", "Day", "Original Start Time", "Job Type", "Total Hours", "True Start Time", "True End Time"]
+    headers = ["Employee", "Day", "Start Time", "Job Type", "Total Hours"]
     data.append(headers)
-    start_hour_index = 6
+
     total_team_hours = 0
     day_off_count = 0
+    start_hour_index=6
 
     for i in range(num_employees):
         total_weekly_hours = 0
         for d in range(num_days):
             total_day_hours = 0
-            original_start_time = None
-            true_start_time = None
-            true_end_time = None
-            
             if lp.value(y[i][d]) == 1:
                 for j in range(num_segments):
                     for a in range(num_job):
@@ -274,36 +261,17 @@ def prepare_schedule_data(employee_names, days_considering, num_employees, num_d
                             total_day_hours += 1
                             total_weekly_hours += 1
                             total_team_hours += 1
-                            
+
                             job_type = "FP" if a == 0 else "BM" if a == 1 else "Unknown"
                             hour = int(start_hour_index + (j * segment_minutes) // 60)
                             minute = int((j * segment_minutes) % 60)
                             time_str = f"{hour:02d}:{minute:02d}"
-                            
-                            # Check and record the original start time
-                            if original_start_time is None and lp.value(f[i][d][j]) == 1:
-                                original_start_time = time_str
-                                
-                            # Record true start time when x[i][d][j] is 1 and it is the first segment for the day
-                            if true_start_time is None and lp.value(f[i][d][j]) == 1:
-                                true_start_time = time_str
-                                
-                            # Record true end time when x[i][d][j] is 1 and it is the last segment of the shift
-                            if lp.value(e[i][d][j]) == 1:
-                                true_end_hour = (hour + (minute + 15) // 60) % 24
-                                true_end_minute = (minute + 15) % 60
-                                true_end_time = f"{true_end_hour:02d}:{true_end_minute:02d}"
-                            
-                            data.append([employee_names[i], days_considering[d], original_start_time, job_type, total_day_hours / (60/segment_minutes), true_start_time, true_end_time])
-                            
-                            # Reset the true start time for the next shift segment
-                            if lp.value(e[i][d][j]) == 1:
-                                true_start_time = None
+                            data.append([employee_names[i], days_considering[d], time_str, job_type, total_day_hours / (60/segment_minutes)])
             else:
-                data.append([employee_names[i], days_considering[d], "Off", "", 0, "", ""])
-            
-            total_weekly_hours = total_weekly_hours / (60/segment_minutes)
-            data.append([employee_names[i], "Total Hours for the week", "", "", total_weekly_hours, "", ""])
+                data.append([employee_names[i], days_considering[d], "Off", "", 0])
+
+        total_weekly_hours = total_weekly_hours / (60/segment_minutes)
+        data.append([employee_names[i], "Total Hours for the week", "", "", total_weekly_hours])
 
     total_team_hours = total_team_hours / (60/segment_minutes)
     summary = [
@@ -313,36 +281,25 @@ def prepare_schedule_data(employee_names, days_considering, num_employees, num_d
     data.extend(summary)
     return data
 
-        
-    def save_data_to_json(data, filename):
-        """
-        Save data to a JSON file. If the file exists, it will be overwritten.
-        If the file does not exist, a new one will be created.
-    
-        Args:
-            data (dict): The data to be saved.
-            filename (str): The name of the file where data will be saved.
-        """
-        # Get the absolute path of the file
-        abs_path = os.path.abspath(filename)
-        
-        try:
-            with open(abs_path, 'w') as f:
-                json.dump(data, f, indent=4)
-            print(f"Data successfully saved to {abs_path}")
-        except Exception as e:
-            print(f"An error occurred while saving data to {abs_path}: {e}")
-                
-    def scheduler_run():
-        # Assuming you have the required arguments already defined here
-        data = prepare_schedule_data(
-            employee_names, days_considering, num_employees, num_days, 
-            num_segments, num_job, segment_minutes, y, x, f, employee_pref
-        )
-        save_data_to_json(data, 'schedule_data.json')
-    
-        return lp.LpStatus[prob.status]
+def save_data_to_json(data, filename):
+    with open(filename, 'w') as f:
+        json.dump(data, f)
+
+def scheduler(status, employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref):
+    if status != lp.LpStatusOptimal:
+        print("Optimization did not find an optimal solution.")
+        return
+
+    data = prepare_schedule_data(
+        employee_names, days_considering, num_employees, num_days, 
+        num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref
+    )
+    save_data_to_json(data, 'schedule_data.json')
+
+def run_scheduler():
+    status, employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref = get_lp_solver_outputs()
+    scheduler(status, employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref)
 
 
-    scheduler_run()
+
 
