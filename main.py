@@ -66,4 +66,6 @@ if __name__ == "__main__":
     main()
 
 
-
+# service = get_service()
+# data = load_data_from_json('schedule_data.json')
+# update_sheet(service, SPREADSHEET_ID, SHEET_NAME, data)

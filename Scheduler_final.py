@@ -51,6 +51,8 @@ def lp_solver():
     sheets_time_limit = data["sheets_time_limit"]
     earliest_shift_end_hrs =data["earliest_shift_end"]
     latest_shift_start_hrs= data["latest_shift_start"]
+    earliest_latest_flag = data["earliest_latest_flag"]
+    max_daily_O_hrs = data["max_daily_O_hrs"]
     
     
     print("_______Operations info check________")
@@ -99,9 +101,10 @@ def lp_solver():
     min_daily_FP = [hours * (60 / segment_minutes) for hours in min_daily_FP_hrs]
     min_weekly_FP = min_weekly_FP_hrs * (60 / segment_minutes)
     
+    #calculate min daily oven hours into segments 
+    max_daily_O = [int(hours * (60 / segment_minutes)) for hours in max_daily_O_hrs]
     #names
     num_employees = len(employee_names)
-    
     
     
     # Calculate the indices for hours before the cutoff hour
@@ -182,15 +185,16 @@ def lp_solver():
                 prob += f[i][d][j+1] >= lp.lpSum(x[i][d][j+1][a] for a in range(num_job)) - lp.lpSum(x[i][d][j][a] for a in range(num_job))
 
 
-    for i in range (num_employees):
-        for d in range(num_days):
-            prob += lp.lpSum(x[i][d][j][a] for j in range(latest_shift_start, earliest_shift_end) for a in range(num_job)) >= y[i][d] * (earliest_shift_end - latest_shift_start)
-    
+    if earliest_latest_flag == "TRUE":
+        for i in range (num_employees):
+                for d in range(num_days):
+                    prob += lp.lpSum(x[i][d][j][a] for j in range(latest_shift_start, earliest_shift_end) for a in range(num_job)) >= y[i][d] * (earliest_shift_end - latest_shift_start)
+            
     
     for d in range(num_days):
-        #Constraint: have more than the min # of FP hrs per day
+        #Constraint: have more than the min # of FP hrs and O per day
         prob += lp.lpSum(x[i][d][j][0] for j in range(num_segments) for i in range(num_employees)) >= min_daily_FP[d]
-        
+        # prob += lp.lpSum(x[i][d][j][2] for j in range(num_segments) for i in range(num_employees)) <= max_daily_O[d]
         # Constraint: Ensure at least a certain number of hours are worked for FP before the cutoff hour
         prob += lp.lpSum(x[i][d][j][0] for i in range(num_employees) for j in hours_before_cutoff) >= min_morning_FP[d]
                          
@@ -216,10 +220,16 @@ def lp_solver():
             d = days_considering.index(day)
             segments = details["segments"]
             job_type = details["job_type"]
-            for j, forced in enumerate(segments):
-                if forced == 1:
-                    prob += x[i][d][j][job_type] == 1  # Force employee to work job type 'a' during specified segments
-    
+            if job_type in [0, 1, 2]:  # This means they are forced to specifically be a BM, FP, or O
+                for j, forced in enumerate(segments):
+                    if forced == 1:
+                        prob += x[i][d][j][job_type] == 1  # Force employee to work job type 'a' during specified segments
+            elif job_type == 3:  # This means they can be either BM or FP
+                for j, forced in enumerate(segments):
+                    if forced == 1:
+                        prob += lp.lpSum([x[i][d][j][a] for a in range(2)]) == 1  # Force employee to work either BM or FP
+
+                    
     
     
     # Set a time limit in seconds 
@@ -262,7 +272,7 @@ def prepare_schedule_data(employee_names, days_considering, num_employees, num_d
                             total_weekly_hours += 1
                             total_team_hours += 1
 
-                            job_type = "FP" if a == 0 else "BM" if a == 1 else "Unknown"
+                            job_type = "FP" if a == 0 else "BM" if a == 1 else "O" if a ==2 else "Unknown"
                             hour = int(start_hour_index + (j * segment_minutes) // 60)
                             minute = int((j * segment_minutes) % 60)
                             time_str = f"{hour:02d}:{minute:02d}"

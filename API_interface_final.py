@@ -131,6 +131,10 @@ def grab_sheet():
                         force_shift[employee][day]["job_type"] = 0
                     elif row[col_shift_type] == "BM":
                         force_shift[employee][day]["job_type"] = 1
+                    elif row[col_shift_type] == "O":
+                        force_shift[employee][day]["job_type"] = 2
+                    elif row[col_shift_type] == "HYB":
+                        force_shift[employee][day]["job_type"] = 3
                         
         def populate_hourly_requirements_BM(values, end_req_col):
             day_column_map = {
@@ -168,6 +172,7 @@ def grab_sheet():
                 pref = float(row[1]) if row[1] else None
                 FP_check = row[3] if row[3] else None
                 BM_check =row[4] if row[4] else None
+                O_check = row[5] if row[5] else None
                 allocated_min_hour = float(row[6]) if row[6] else None
                 allocated_max_hour= float (row[7]) if row[7] else None
                 
@@ -177,13 +182,15 @@ def grab_sheet():
                 if  pref is not None:
                     employee_pref[employee] = pref
                     
-                if FP_check and BM_check is not None:
+                if FP_check and BM_check and O_check is not None:
                     if employee not in ability: #initalize the emp info
-                        ability[employee] = {"FP": 0, "BM": 0}
+                        ability[employee] = {"FP": 0, "BM": 0, "O":0}
                     if FP_check == "TRUE":
                         ability[employee]["FP"] = 1
                     if BM_check == "TRUE":
                         ability[employee]["BM"] = 1
+                    if O_check =="TRUE":
+                        ability[employee]["O"] = 1
                 
                 if allocated_min_hour is not None:
                     allocated_min_hours[employee] = ( allocated_min_hour)
@@ -242,6 +249,8 @@ def grab_sheet():
             sheets_time_limit = int(get_cell_value("AIR16"))
             earliest_shift_end = float (get_cell_value("AIR17"))
             latest_shift_start = float(get_cell_value("AIR18") )
+            earliest_latest_flag = str(get_cell_value("AIR19"))
+
             
             
             
@@ -250,9 +259,12 @@ def grab_sheet():
             total_labor_hour_limit = float (get_cell_value("AIR10"))
             
             
-            job_type = get_range_values("AIR13:AIS13")
+            job_type = get_range_values("AIR13:AIT13")
+
             min_morning_FP_hrs = get_range_values("AIR14:AIX14", float)
             min_daily_FP_hrs = get_range_values("AIR15:AIX15", float)
+            max_daily_O_hrs = get_range_values("AIR20:AIX20", float)
+
             # print("min_daily_FP", min_daily_FP)
             # print("min_morning_FP", min_morning_FP)
 
@@ -306,8 +318,7 @@ def grab_sheet():
         # Assuming values is defined and fetched from somewhere
         hourly_requirements_BM = populate_hourly_requirements_BM(values, end_req_col)
 
-       
-            
+
             
         return {
             "hourly_requirements_BM": hourly_requirements_BM,
@@ -333,7 +344,11 @@ def grab_sheet():
             "min_weekly_FP_hrs": min_weekly_FP_hrs, 
             "sheets_time_limit": sheets_time_limit,
             "latest_shift_start": latest_shift_start,
-            "earliest_shift_end": earliest_shift_end
+            "earliest_shift_end": earliest_shift_end, 
+            "earliest_latest_flag": earliest_latest_flag, 
+            "max_daily_O_hrs": max_daily_O_hrs
+            
+            
         }
 
      
