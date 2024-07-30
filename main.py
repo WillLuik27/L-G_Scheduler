@@ -25,7 +25,7 @@ from API_interface_final import grab_sheet
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SPREADSHEET_ID = "1lUcZLprKmdDsDWWknsWbOfKq3VcXvKbTXUhF1FdmcOI"
-SHEET_NAME = "McKinney_scheduler_algo"
+SHEET_NAME = "Final_schedule"
 
 def get_service():
     creds = None
