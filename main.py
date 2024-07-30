@@ -18,8 +18,8 @@ from API_interface_final import grab_sheet
 
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SPREADSHEET_ID = "110KkeoBMKEB48OogS5E5X3LZN4liKbKEQJzpx8sYv8E"
-SHEET_NAME = "Final_schedule"
+SPREADSHEET_ID = "1iDEgHwKs5u9bRZgsy65LiMRMUKt5K_O8hye-bz6qx3Y"
+SHEET_NAME = "Dallas_scheduler_algo"
 
 def get_service():
     creds = None

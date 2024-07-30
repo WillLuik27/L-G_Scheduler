@@ -55,6 +55,9 @@ def grab_sheet():
         force_shift ={}
         allocated_max_hours ={}
         allocated_min_hours={}
+        emp_num_shifts ={}
+        start_shift_ranges={}
+        emp_shift_len= {}
         
         
         
@@ -160,13 +163,61 @@ def grab_sheet():
                                 hourly_requirements_BM[day].append(int(day_info))
             
             return hourly_requirements_BM
+        
+                
+        def process_shift_lengths(values, days_considering):
+            shift_len_columns = {
+                "Sunday": "AJL",
+                "Monday": "AJM",
+                "Tuesday": "AJN",
+                "Wednesday": "AJO",
+                "Thursday": "AJP",
+                "Friday": "AJQ",
+                "Saturday": "AJR"
+            }
+        
+            shift_lengths = {}
+        
+            def column_to_index(column):
+                index = 0
+                for char in column:
+                    index = index * 26 + (ord(char.upper()) - ord('A')) + 1
+                return index - 1
+        
+            for row in values[4:]:
+                employee = row[0] if row[0] else None
+                if employee:
+                    shift_lengths[employee] = {}
+                    for day, column in shift_len_columns.items():
+                        if day in days_considering:
+                            col_index = column_to_index(column)
+                            shift_length = float(row[col_index]) if col_index < len(row) and row[col_index] != '' else None
+                            if shift_length is not None:
+                                shift_lengths[employee][day] = shift_length
+            return shift_lengths
+
+
+        
+
+
+
 
 
         end_roster_col = int(get_cell_value("B3")) +4 +1  
-   
-
+        
+        column_index_AJI = column_to_index("AJI")
+        column_index_AJJ = column_to_index("AJJ")
+        
+        shift_len_sunday_col = column_to_index("AJL")
+        shift_len_monday_col = column_to_index("AJM")
+        shift_len_tuesday_col = column_to_index("AJN")
+        shift_len_wednesday_col = column_to_index("AJO")
+        shift_len_thursday_col = column_to_index("AJP")
+        shift_len_friday_col = column_to_index("AJQ")
+        shift_len_saturday_col = column_to_index("AJJR")
         
         if values:
+            shift_lengths= process_shift_lengths(values, days_considering)
             for row in values[4: end_roster_col]:
                 employee = row[0] if row[0] else None
                 pref = float(row[1]) if row[1] else None
@@ -175,6 +226,21 @@ def grab_sheet():
                 O_check = row[5] if row[5] else None
                 allocated_min_hour = float(row[6]) if row[6] else None
                 allocated_max_hour= float (row[7]) if row[7] else None
+                num_shifts = int(row[2]) if row[2] is not None and row[2] != '' else None
+                
+                start_start_shift_range = float (row[column_index_AJI]) if column_index_AJI < len(row) and row[column_index_AJI] else None
+                end_start_shift_range =float(row[column_index_AJJ]) if column_index_AJJ < len(row) and row[column_index_AJJ] else None
+                
+                shift_len_sunday = float (row[shift_len_sunday_col]) if shift_len_sunday_col < len(row) and row[shift_len_sunday_col] else None
+                shift_len_monday =float (row[shift_len_monday_col]) if shift_len_monday_col < len(row) and row[shift_len_monday_col] else None
+                shift_len_tuesday =  float (row[shift_len_tuesday_col]) if shift_len_tuesday_col < len(row) and row[shift_len_tuesday_col] else None
+                shift_len_wednesday = float (row[shift_len_wednesday_col]) if shift_len_wednesday_col < len(row) and row[shift_len_wednesday_col] else None
+                shift_len_thursday =float (row[shift_len_thursday_col]) if shift_len_thursday_col < len(row) and row[shift_len_thursday_col] else None
+                shift_len_friday =float (row[shift_len_friday_col]) if shift_len_friday_col < len(row) and row[shift_len_friday_col] else None
+                shift_len_saturday= float (row[shift_len_saturday_col]) if shift_len_saturday_col < len(row) and row[shift_len_saturday_col] else None
+                
+                
+                
                 
                 # Adding emp info to datasets only if data is not None
                 if employee is not None :
@@ -196,6 +262,12 @@ def grab_sheet():
                     allocated_min_hours[employee] = ( allocated_min_hour)
                 if allocated_max_hour is not None:
                     allocated_max_hours[employee] =  (allocated_max_hour)
+                if num_shifts is not None:
+                    emp_num_shifts[employee] = (num_shifts)
+                if start_start_shift_range is not None and end_start_shift_range is not None:
+                    start_shift_ranges[employee] = [start_start_shift_range, end_start_shift_range]
+                # for shift_len in [shift_len_sunday, shift_len_monday , shift_len_tuesday , shift_len_wednesday , shift_len_thursday , shift_len_friday ,shift_len_saturday]:
+                #     emp_shift_len[employee][]
                         
                 #_______________________________________________________________________________________________
                 #_______________________________________________________________________________________________
@@ -229,6 +301,7 @@ def grab_sheet():
                     )
 
 
+                
                 #_______________________________________________________________________________________________
   
             #_______________________________________________________________________________________________
@@ -250,6 +323,9 @@ def grab_sheet():
             earliest_shift_end = float (get_cell_value("AIR17"))
             latest_shift_start = float(get_cell_value("AIR18") )
             earliest_latest_flag = str(get_cell_value("AIR19"))
+            FP_latest_hr = int(get_cell_value("AIR21"))
+            latest_FP_flag = str(get_cell_value("AIR22"))
+            
 
             
             
@@ -319,6 +395,7 @@ def grab_sheet():
         hourly_requirements_BM = populate_hourly_requirements_BM(values, end_req_col)
 
 
+
             
         return {
             "hourly_requirements_BM": hourly_requirements_BM,
@@ -346,7 +423,12 @@ def grab_sheet():
             "latest_shift_start": latest_shift_start,
             "earliest_shift_end": earliest_shift_end, 
             "earliest_latest_flag": earliest_latest_flag, 
-            "max_daily_O_hrs": max_daily_O_hrs
+            "max_daily_O_hrs": max_daily_O_hrs, 
+            "FP_latest_hr": FP_latest_hr, 
+            "latest_FP_flag": latest_FP_flag, 
+            "emp_num_shifts": emp_num_shifts,
+            "start_shift_ranges": start_shift_ranges, 
+            "shift_lengths": shift_lengths
             
             
         }

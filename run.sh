@@ -10,7 +10,7 @@ source venv/bin/activate
 pip install -r lib_requirements.txt
 
 # Run the main Python script
-python Allen_main.py
+python main.py
 
 # Deactivate the virtual environment
 deactivate

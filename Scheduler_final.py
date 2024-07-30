@@ -12,6 +12,7 @@ import pulp as lp
 from API_interface_final import grab_sheet
 import datetime
 import os
+from math import floor
 
 def lp_solver():
     def print_with_timestamp(message):
@@ -53,6 +54,12 @@ def lp_solver():
     latest_shift_start_hrs= data["latest_shift_start"]
     earliest_latest_flag = data["earliest_latest_flag"]
     max_daily_O_hrs = data["max_daily_O_hrs"]
+    FP_latest_hr = data["FP_latest_hr"]
+    latest_FP_flag= data["latest_FP_flag"]
+    emp_num_shifts = data["emp_num_shifts"]
+    start_shift_ranges = data["start_shift_ranges"]
+    shift_lengths = data["shift_lengths"]
+    
     
     
     print("_______Operations info check________")
@@ -78,20 +85,53 @@ def lp_solver():
     num_hours = end_hour_backend - start_hour_backend   # Number of hours in the specified range
     segment_minutes =15
     num_segments = int(((num_hours) * (60 / segment_minutes)))  # Number of 15-minute segments. 
+    end_hour_backend_segs = int (end_hour_backend * (60 / segment_minutes))
     
     #change ealiest and latest shift star/end to 15-min segments
     earliest_shift_end = int((earliest_shift_end_hrs- start_hour_backend)  * (60 / segment_minutes))
     latest_shift_start= int((latest_shift_start_hrs- start_hour_backend)  * (60 / segment_minutes))
+    
+    #segment the shift lengths
+    def convert_shift_lengths_to_segments(shift_lengths, segment_minutes):
+        shift_lengths_segs = {}
+        factor = 60 / segment_minutes
+    
+        for employee, days in shift_lengths.items():
+            shift_lengths_segs[employee] = {}
+            for day, length in days.items():
+                shift_lengths_segs[employee][day] = int(length * factor)
+    
+        return shift_lengths_segs
+    shift_lengths_segs = convert_shift_lengths_to_segments(shift_lengths, segment_minutes)
+
+    
 
 
     # Create min_morning_FP by multiplying each element in min_morning_FP_hrs by (60 / segment_minutes)
     min_morning_FP = [hours * (60 / segment_minutes) for hours in min_morning_FP_hrs]
     
+    #change the start range listing into proper segments
+    start_shift_ranges_segs = {
+        employee: [
+            int((start_time - start_hour_backend) * (60 // segment_minutes)),
+           int(1+ (end_time - start_hour_backend) * (60 // segment_minutes))
+        ]
+        for employee, (start_time, end_time) in start_shift_ranges.items()
+        }
 
+
+
+    
+    
+    #change FP latest hr to the 15 min segment on the j range. must subtract from start hr backend
+    FP_latest = int((FP_latest_hr- start_hour_backend)  * (60 / segment_minutes))
+
+    #change Hrs until break into 15 min segments 
+    segs_until_break = int( hrs_until_break * (60 / segment_minutes))
     
     num_days = len(days_considering)  
 
-    num_job = len(job_type)
+    num_job = len(job_type) + 1 # add one to include job types as they are not grabbed from the google sheet
     
     # min max shift hours
     min_shift_len = min_shift_len_hrs *(60/segment_minutes)
@@ -105,6 +145,7 @@ def lp_solver():
     max_daily_O = [int(hours * (60 / segment_minutes)) for hours in max_daily_O_hrs]
     #names
     num_employees = len(employee_names)
+    
     
     
     # Calculate the indices for hours before the cutoff hour
@@ -124,21 +165,17 @@ def lp_solver():
     # f[i][d][j] is 1 for the one hour when they start to work on day d. This is the start flag so only consecutive shifts
     f = [[[lp.LpVariable(f"f_{i}_{d}_{j}", cat=lp.LpBinary) for j in range(num_segments)] for d in range(num_days)] for i in range(num_employees)]
     
-    # # Objective function: minimize the total number of hours team works
-    # prob += lp.lpSum(x[i][d][j] for i in range(num_employees) for d in range(num_days) for j in range(num_segments))
+    #bk[i][d] is 1 if someone is granted a break for that day. Only granted if shift len > hrs until break
+    bk = [[lp.LpVariable(f"bk_{i}_{d}", cat=lp.LpBinary) for d in range(num_days)] for i in range(num_employees)]
     
-    # #Objective function: minimize the total number of people working
-    # prob+= lp.lpSum(f[i][d][j]  for i in range(num_employees) for d in range(num_days) for j in range(num_segments))
+    floor_segments = [[lp.LpVariable(f"floor_segments_{i}_{d}", cat=lp.LpInteger) for d in range(num_days)] for i in range(num_employees)]
     
+    
+
     # Objective function: minimize the hours worked
     prob += lp.lpSum(x[i][d][j][a] for i in range(num_employees) for d in range(num_days) for j in range(num_segments) for a in range(num_job))
     
-    #______when changing objective functions need to consider changing LPMaximize to LPMinimize
-    # # Objective function: maximize the preference minus hour worked. It is on 2 lines bc so long. we can make this weighted as well is we care more about one over the other
-    # prob += - (lp.lpSum(employee_pref [employee_names[i]] * lp.lpSum(x[i][d][j][a] for d in range(num_days) for j in range(num_segments)) for i in range(num_employees) for a in range(num_job))/5) \
-    #   + (lp.lpSum(x[i][d][j][a] for i in range(num_employees) for d in range(num_days) for j in range(num_segments) for a in range(num_job)))
-    
-    
+
     
     
     #Constraints:
@@ -151,6 +188,23 @@ def lp_solver():
             prob += lp.lpSum(x[i][d][j][a] for j in range(num_segments) for a in range(num_job)) >= min_shift_len * y[i][d]  # Minimum hours if y[i][d] == 1
             prob += lp.lpSum(x[i][d][j][a] for j in range(num_segments) for a in range(num_job)) <= max_shift_len * y[i][d]  # Maximum hours if y[i][d] == 1
             
+            # ensure starting shift properly accounted for for edge effects
+            prob += f[i][d][0] == lp.lpSum(x[i][d][0][a] for a in range(num_job))
+            
+            # Constraint to calculate the number of segments worked
+            prob += floor_segments[i][d] == lp.lpSum(x[i][d][j][a] for j in range(num_segments) for a in range(num_job - 1))  # Exclude breaks
+            
+            # Constraint: Allocate breaks only if segments worked > 24
+            prob += floor_segments[i][d] >= 25 * bk[i][d]
+            prob += floor_segments[i][d] <= 25 * bk[i][d] + 24  # Ensure break only if segments are > 24
+            
+            # Constraint: Ensure exactly 2 break segments if bk[i][d] == 1
+            prob += lp.lpSum(x[i][d][j][num_job-1] for j in range(num_segments)) == 2 * bk[i][d]
+    
+            for j in range(num_segments - 1):
+                # Sum over all job types to check if there's a transition from 0 to 1 in total working hours
+                prob += f[i][d][j+1] >= lp.lpSum(x[i][d][j+1][a] for a in range(num_job)) - lp.lpSum(x[i][d][j][a] for a in range(num_job))
+            
             # Constraints: ensure f[i][d][j] sums to 1 for each employee per day. Can only start once
             prob += lp.lpSum(f[i][d][j] for j in range(num_segments)) == y[i][d]
             for j in range(num_segments) : 
@@ -162,49 +216,63 @@ def lp_solver():
                 # If employee does not have BM ability, they cannot be assigned to BM tasks (job_type[1])
                 if ability[employee_names[i]]["BM"] == 0:
                     prob += x[i][d][j][1] == 0
+                # DO not consider ppl for ovens if they are not available to do it
+                if ability[employee_names[i]]["O"] == 0:
+                    prob += x[i][d][j][2] == 0
                 
                 #Constraint: emp can only work during available hours
                 if availability[employee_names[i]][days_considering[d]][j] == 0:  
                     for a in range(num_job):
                         prob += x[i][d][j][a] == 0
-                 
-    
+            #Constraint to make sure that food preps are not working past a certain time at Allen most specifically 
+            if latest_FP_flag =="TRUE":
+                if ability[employee_names[i]]["BM"] ==0: #only constrain the people whos are soly Food preps. For Allen this is only 2 specific people we dont want working late. AKA the good food prepers
+                    for j in range(FP_latest, num_segments ):
+                        for a in range(num_job-1):
+                            prob += x[i][d][j][a] ==0
     
 
-    
-    
-    #Cosntraint to make an end time for each employee. building the e[i][d][j] variable
+    # Constraint for forcing some people to only work a specified number of days
     for i in range(num_employees):
+        employee_name = employee_names[i]  # Assuming you have a list of employee names
+        if employee_name in emp_num_shifts:
+            prob += lp.lpSum(y[i][d] for d in range(num_days)) == emp_num_shifts[employee_name]
+
+    #COnstraint: make some people stat in a specified range
+    for i in range(num_employees):
+        employee_name = employee_names[i]
         for d in range(num_days):
-            # Ensure that ending shifts are properly accounted for in the last segment
-          
-            # ensure starting shift properly accounted for for edge effects
-            prob += f[i][d][0] == lp.lpSum(x[i][d][0][a] for a in range(num_job))
-            for j in range(num_segments - 1):
-                # Sum over all job types to check if there's a transition from 0 to 1 in total working hours
-                prob += f[i][d][j+1] >= lp.lpSum(x[i][d][j+1][a] for a in range(num_job)) - lp.lpSum(x[i][d][j][a] for a in range(num_job))
+            if employee_name in start_shift_ranges_segs:
+                #so I am making it so that the start time will be within this range if they are working. if not working then y ==0 and this start time has to be 0 for the range
+                prob += lp.lpSum(f[i][d][j] for j in range (start_shift_ranges_segs[employee_name][0], start_shift_ranges_segs[employee_name][1] )) == y[i][d]  
+                # prob += lp.lpSum(x[i][d][j][a] for j in range(start_shift_ranges_segs[employee_name][0], start_shift_ranges_segs[employee_name][1]) for a in range(num_job)) >= y[i][d]
+
+
 
 
     if earliest_latest_flag == "TRUE":
         for i in range (num_employees):
                 for d in range(num_days):
                     prob += lp.lpSum(x[i][d][j][a] for j in range(latest_shift_start, earliest_shift_end) for a in range(num_job)) >= y[i][d] * (earliest_shift_end - latest_shift_start)
-            
+       
+                 
     
     for d in range(num_days):
         #Constraint: have more than the min # of FP hrs and O per day
         prob += lp.lpSum(x[i][d][j][0] for j in range(num_segments) for i in range(num_employees)) >= min_daily_FP[d]
-        # prob += lp.lpSum(x[i][d][j][2] for j in range(num_segments) for i in range(num_employees)) <= max_daily_O[d]
+        prob += lp.lpSum(x[i][d][j][2] for j in range(num_segments) for i in range(num_employees)) == max_daily_O[d]
         # Constraint: Ensure at least a certain number of hours are worked for FP before the cutoff hour
         prob += lp.lpSum(x[i][d][j][0] for i in range(num_employees) for j in hours_before_cutoff) >= min_morning_FP[d]
                          
         for j in range(num_segments):
             # Constraint: Ensure more than the specified number of people are working BM each hour
             prob += lp.lpSum(x[i][d][j][1] for i in range(num_employees)) >=  hourly_requirements_BM[days_considering [d]][j]
+            #Constraint that only 1 person can be working at the Oven at a time
+            prob +=lp.lpSum(x[i][d][j][2] for i in range(num_employees)) <= 1
+        
     
     
-    
-    
+
     #Constraint: be above the min weekly FP hours
     prob += lp.lpSum(x[i][d][j][0] for i in range(num_employees) for j in range(num_segments) for d in range(num_days)) >= min_weekly_FP
                    
@@ -229,7 +297,18 @@ def lp_solver():
                     if forced == 1:
                         prob += lp.lpSum([x[i][d][j][a] for a in range(2)]) == 1  # Force employee to work either BM or FP
 
+
+    # Constraint: Ensure total hours worked per day for each employee matches the shift_lengths_segs value
+    for i in range(num_employees):
+        employee_name = employee_names[i]
+        if employee_name in shift_lengths_segs:
+            for d in range(num_days):
+                if days_considering[d] in shift_lengths_segs[employee_name]:
+                    shift_length = shift_lengths_segs[employee_name][days_considering[d]]
+                    prob += lp.lpSum(x[i][d][j][a] for j in range(num_segments) for a in range(num_job)) == shift_length
                     
+        
+    
     
     
     # Set a time limit in seconds 
@@ -272,7 +351,7 @@ def prepare_schedule_data(employee_names, days_considering, num_employees, num_d
                             total_weekly_hours += 1
                             total_team_hours += 1
 
-                            job_type = "FP" if a == 0 else "BM" if a == 1 else "O" if a ==2 else "Unknown"
+                            job_type = "FP" if a == 0 else "BM" if a == 1 else "O" if a ==2 else "BK" if a == 3 else "Unknown"
                             hour = int(start_hour_index + (j * segment_minutes) // 60)
                             minute = int((j * segment_minutes) % 60)
                             time_str = f"{hour:02d}:{minute:02d}"
