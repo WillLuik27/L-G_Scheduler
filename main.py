@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Tue Jul 30 12:08:13 2024
+
+@author: williamluik
+"""
+
+"""
 Created on Wed Jul 10 09:09:51 2024
 
 @author: williamluik
@@ -18,8 +24,8 @@ from API_interface_final import grab_sheet
 
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SPREADSHEET_ID = "110KkeoBMKEB48OogS5E5X3LZN4liKbKEQJzpx8sYv8E"
-SHEET_NAME = "Final_schedule"
+SPREADSHEET_ID = "1lUcZLprKmdDsDWWknsWbOfKq3VcXvKbTXUhF1FdmcOI"
+SHEET_NAME = "McKinney_scheduler_algo"
 
 def get_service():
     creds = None

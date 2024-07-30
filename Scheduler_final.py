@@ -103,7 +103,6 @@ def lp_solver():
     
         return shift_lengths_segs
     shift_lengths_segs = convert_shift_lengths_to_segments(shift_lengths, segment_minutes)
-    print(shift_lengths_segs)
 
     
 
