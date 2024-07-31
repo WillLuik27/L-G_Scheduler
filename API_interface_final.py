@@ -19,7 +19,7 @@ print(sys.prefix)
 
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-SPREADSHEET_ID = "110KkeoBMKEB48OogS5E5X3LZN4liKbKEQJzpx8sYv8E"
+SPREADSHEET_ID = "1lUcZLprKmdDsDWWknsWbOfKq3VcXvKbTXUhF1FdmcOI"
 
 
 
