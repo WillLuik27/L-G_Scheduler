@@ -388,7 +388,8 @@ def scheduler(status, employee_names, days_considering, num_employees, num_days,
 def run_scheduler():
     status, employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref = get_lp_solver_outputs()
     scheduler(status, employee_names, days_considering, num_employees, num_days, num_segments, num_job, start_hour, segment_minutes, y, x, f, employee_pref)
-
+    status_str = lp.LpStatus[status]
+    return status_str
 
 
 
