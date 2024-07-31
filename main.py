@@ -57,17 +57,17 @@ def update_sheet(service, spreadsheet_id, sheet_name, data):
         print(f"An error occurred: {error}")
 
 def main():
-    run_scheduler()
+    status = run_scheduler()
     service = get_service()
-    data = load_data_from_json('schedule_data.json')
+    
+    if status != "Optimal":
+        data = [["Status failed"]]
+    else:
+        data = load_data_from_json('schedule_data.json')
+    
     update_sheet(service, SPREADSHEET_ID, SHEET_NAME, data)
 
 if __name__ == "__main__":
-    import os
-
     main()
 
 
-# service = get_service()
-# data = load_data_from_json('schedule_data.json')
-# update_sheet(service, SPREADSHEET_ID, SHEET_NAME, data)
