@@ -63,6 +63,8 @@ def main():
     update_sheet(service, SPREADSHEET_ID, SHEET_NAME, data)
 
 if __name__ == "__main__":
+    import os
+
     main()
 
 
