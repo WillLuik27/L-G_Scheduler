@@ -323,7 +323,7 @@ def grab_sheet():
             earliest_shift_end = float (get_cell_value("AIR17"))
             latest_shift_start = float(get_cell_value("AIR18") )
             earliest_latest_flag = str(get_cell_value("AIR19"))
-            FP_latest_hr = int(get_cell_value("AIR21"))
+            FP_latest_hr = float(get_cell_value("AIR21"))
             latest_FP_flag = str(get_cell_value("AIR22"))
             
 
