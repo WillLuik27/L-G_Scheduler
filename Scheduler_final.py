@@ -108,7 +108,10 @@ def lp_solver():
 
 
     # Create min_morning_FP by multiplying each element in min_morning_FP_hrs by (60 / segment_minutes)
-    min_morning_FP = [hours * (60 / segment_minutes) for hours in min_morning_FP_hrs]
+    min_morning_FP = {day: hours * (60 / segment_minutes) for day, hours in min_morning_FP_hrs.items()}
+
+
+
     
     #change the start range listing into proper segments
     start_shift_ranges_segs = {
@@ -137,12 +140,15 @@ def lp_solver():
     min_shift_len = min_shift_len_hrs *(60/segment_minutes)
     max_shift_len = max_shift_len_hrs *(60/segment_minutes)
     
-    # Calculate min_daily_FP_hrs by multiplying min_daily_FP by (60 / segment_minutes)
-    min_daily_FP = [hours * (60 / segment_minutes) for hours in min_daily_FP_hrs]
+
+    # Create min_daily_FP by multiplying each element in min_daily_FP_hrs by (60 / segment_minutes)
+    min_daily_FP = {day: hours * (60 / segment_minutes) for day, hours in min_daily_FP_hrs.items()}
+
     min_weekly_FP = min_weekly_FP_hrs * (60 / segment_minutes)
     
-    #calculate min daily oven hours into segments 
-    max_daily_O = [int(hours * (60 / segment_minutes)) for hours in max_daily_O_hrs]
+    # Create max_daily_O by multiplying each element in max_daily_O_hrs by (60 / segment_minutes) and converting to an integer
+    max_daily_O = {day: int(hours * (60 / segment_minutes)) for day, hours in max_daily_O_hrs.items()}
+
     #names
     num_employees = len(employee_names)
     
@@ -259,10 +265,10 @@ def lp_solver():
     
     for d in range(num_days):
         #Constraint: have more than the min # of FP hrs and O per day
-        prob += lp.lpSum(x[i][d][j][0] for j in range(num_segments) for i in range(num_employees)) >= min_daily_FP[d]
-        prob += lp.lpSum(x[i][d][j][2] for j in range(num_segments) for i in range(num_employees)) == max_daily_O[d]
+        prob += lp.lpSum(x[i][d][j][0] for j in range(num_segments) for i in range(num_employees)) >= min_daily_FP[days_considering [d]]
+        prob += lp.lpSum(x[i][d][j][2] for j in range(num_segments) for i in range(num_employees)) == max_daily_O[days_considering[d]]
         # Constraint: Ensure at least a certain number of hours are worked for FP before the cutoff hour
-        prob += lp.lpSum(x[i][d][j][0] for i in range(num_employees) for j in hours_before_cutoff) >= min_morning_FP[d]
+        prob += lp.lpSum(x[i][d][j][0] for i in range(num_employees) for j in hours_before_cutoff) >= min_morning_FP[days_considering[d]]
                          
         for j in range(num_segments):
             # Constraint: Ensure more than the specified number of people are working BM each hour
