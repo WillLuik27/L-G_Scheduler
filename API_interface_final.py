@@ -25,7 +25,6 @@ SPREADSHEET_ID = "1iDEgHwKs5u9bRZgsy65LiMRMUKt5K_O8hye-bz6qx3Y"
 
 
 
-
 def grab_sheet():
     credentials = None
     if os.path.exists("token.json"):
@@ -231,13 +230,6 @@ def grab_sheet():
                 start_start_shift_range = float (row[column_index_AJI]) if column_index_AJI < len(row) and row[column_index_AJI] else None
                 end_start_shift_range =float(row[column_index_AJJ]) if column_index_AJJ < len(row) and row[column_index_AJJ] else None
                 
-                shift_len_sunday = float (row[shift_len_sunday_col]) if shift_len_sunday_col < len(row) and row[shift_len_sunday_col] else None
-                shift_len_monday =float (row[shift_len_monday_col]) if shift_len_monday_col < len(row) and row[shift_len_monday_col] else None
-                shift_len_tuesday =  float (row[shift_len_tuesday_col]) if shift_len_tuesday_col < len(row) and row[shift_len_tuesday_col] else None
-                shift_len_wednesday = float (row[shift_len_wednesday_col]) if shift_len_wednesday_col < len(row) and row[shift_len_wednesday_col] else None
-                shift_len_thursday =float (row[shift_len_thursday_col]) if shift_len_thursday_col < len(row) and row[shift_len_thursday_col] else None
-                shift_len_friday =float (row[shift_len_friday_col]) if shift_len_friday_col < len(row) and row[shift_len_friday_col] else None
-                shift_len_saturday= float (row[shift_len_saturday_col]) if shift_len_saturday_col < len(row) and row[shift_len_saturday_col] else None
                 
                 
                 
@@ -323,7 +315,7 @@ def grab_sheet():
             earliest_shift_end = float (get_cell_value("AIR17"))
             latest_shift_start = float(get_cell_value("AIR18") )
             earliest_latest_flag = str(get_cell_value("AIR19"))
-            FP_latest_hr = int(get_cell_value("AIR21"))
+            FP_latest_hr = float(get_cell_value("AIR21"))
             latest_FP_flag = str(get_cell_value("AIR22"))
             
 
@@ -337,12 +329,16 @@ def grab_sheet():
             
             job_type = get_range_values("AIR13:AIT13")
 
-            min_morning_FP_hrs = get_range_values("AIR14:AIX14", float)
-            min_daily_FP_hrs = get_range_values("AIR15:AIX15", float)
-            max_daily_O_hrs = get_range_values("AIR20:AIX20", float)
+            # min_morning_FP_hrs = get_range_values("AIR14:AIX14", float)
+            # min_daily_FP_hrs = get_range_values("AIR15:AIX15", float)
+            # max_daily_O_hrs = get_range_values("AIR20:AIX20", float) 
+            min_morning_FP_hrs = {day: value for day, value in zip(days_considering, get_range_values("AIR14:AIX14", float))}
+            min_daily_FP_hrs = {day: value for day, value in zip(days_considering, get_range_values("AIR15:AIX15", float))}
+            max_daily_O_hrs = {day: value for day, value in zip(days_considering, get_range_values("AIR20:AIX20", float))}
+            
 
-            # print("min_daily_FP", min_daily_FP)
-            # print("min_morning_FP", min_morning_FP)
+
+
 
 
 
@@ -393,7 +389,6 @@ def grab_sheet():
         
         # Assuming values is defined and fetched from somewhere
         hourly_requirements_BM = populate_hourly_requirements_BM(values, end_req_col)
-
 
 
             
